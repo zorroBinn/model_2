@@ -468,8 +468,12 @@ void rule4(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, ve
 
     //Если осталась непарная деталь
     if (leftoverD1 != -1 || leftoverD0 != -1 || leftoverD2 != -1) {
-        //orderTable[index][3] = leftoverD2;
-
+        int leftover;
+        if (leftoverD1 != -1) leftover = leftoverD1;
+        if (leftoverD0 != -1) leftover = leftoverD0;
+        if (leftoverD2 != -1) leftover = leftoverD2;
+        int lmbX = parameters[leftover - 1][3];
+        
     }
 }
 
