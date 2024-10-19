@@ -29,7 +29,7 @@ void readDataFromFile(const string& filename, vector<vector<int>>& table, int& r
 }
 
 //Функция вывода таблицы значений обработки деталей
-void printTable(const vector<vector<int>>& table, int machines) {
+void printTable(vector<vector<int>>& table, int machines) {
     for (int i = -1; i < machines; i++) {
         if (i == -1) cout << setw(3) << static_cast<char>('i') << " ";
         else if (i < machines) cout << setw(3) << static_cast<char>('A' + i) << " ";
@@ -71,11 +71,11 @@ void printTableWithParamAndOrder(vector<vector<int>>& table, vector<vector<int>>
         else if (i < machines) cout << setw(3) << static_cast<char>('A' + i) << " ";
         else if (i == machines) cout << setw(3) << "P1" << " ";
         else if (i == machines + 1) cout << setw(3) << "P2" << " ";
-        else if (i == machines + 2) cout << "Lmb" << " ";
-        else if (i == machines + 3) cout << "R1" << " ";
-        else if (i == machines + 4) cout << "R2" << " ";
-        else if (i == machines + 5) cout << "R3" << " ";
-        else if (i == machines + 6) cout << "R4" << " ";
+        else if (i == machines + 2) cout << setw(3) << "Lmb" << " ";
+        else if (i == machines + 3) cout << setw(3) << "R1" << " ";
+        else if (i == machines + 4) cout << setw(3) << "R2" << " ";
+        else if (i == machines + 5) cout << setw(3) << "R3" << " ";
+        else if (i == machines + 6) cout << setw(3) << "R4" << " ";
     }
     cout << endl;
 
@@ -145,7 +145,7 @@ void distributeDetails(vector<vector<int>>& parameters, vector<int>& D0, vector<
 }
 
 //Функция для вывода множеств деталей
-void printSets(vector<int>& D0, vector<int>& D1, const vector<int>& D10, vector<int>& D2) {
+void printSets(vector<int>& D0, vector<int>& D1, vector<int>& D10, vector<int>& D2) {
     cout << "D0 (lmb = 0): ";
     for (int detail : D0) cout << detail << " ";
     cout << endl;
@@ -164,7 +164,7 @@ void printSets(vector<int>& D0, vector<int>& D1, const vector<int>& D10, vector<
 }
 
 //Функция для заполнения первого столбца по первому правилу Петрова
-void rule1(vector<vector<int>>& parameters, vector<int>& D10, vector<int>& D2, vector<int>& orderColumn) {
+void rule1(vector<vector<int>>& parameters, vector<int>& D10, vector<int>& D2, vector<vector<int>>& orderTable) {
     //Сортируем детали в D10 по возрастанию Pi1, при равенстве Pi1 - по убыванию lambda
     vector<int> sortedD10 = D10;
     sort(sortedD10.begin(), sortedD10.end(), [&](int a, int b) {
@@ -181,21 +181,128 @@ void rule1(vector<vector<int>>& parameters, vector<int>& D10, vector<int>& D2, v
         return parameters[a - 1][3] > parameters[b - 1][3];
         });
 
-    //Заполняем порядок обработки: сначала элементы из sortedD10, затем из sortedD2
     int index = 0;
     for (int detail : sortedD10) {
-        orderColumn[index++] = detail;
+        orderTable[index++][0] = detail;
     }
     for (int detail : sortedD2) {
-        orderColumn[index++] = detail;
+        orderTable[index++][0] = detail;
     }
 }
 
+// Функция для заполнения второго столбца по второму правилу Петрова
+void rule2(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, vector<int>& D2, vector<vector<int>>& orderTable) {
+    //Собираем все детали в один массив
+    vector<int> allDetails;
+    allDetails.insert(allDetails.end(), D1.begin(), D1.end());
+    allDetails.insert(allDetails.end(), D0.begin(), D0.end());
+    allDetails.insert(allDetails.end(), D2.begin(), D2.end());
+
+    //Сортируем все детали по убыванию lambda
+    sort(allDetails.begin(), allDetails.end(), [&](int a, int b) {
+        return parameters[a - 1][3] > parameters[b - 1][3];
+        });
+
+    int index = 0;
+    for (int i = 0; i < allDetails.size(); ) {
+        int currentLambda = parameters[allDetails[i] - 1][3];
+        vector<int> sameLambdaDetails;
+
+        //Собираем все детали с одинаковым значением lambda
+        while (i < allDetails.size() && parameters[allDetails[i] - 1][3] == currentLambda) {
+            sameLambdaDetails.push_back(allDetails[i]);
+            i++;
+        }
+        //Если в этой группе более одной детали, сортируем по третьему правилу
+        if (sameLambdaDetails.size() > 1) {
+            //Временные вектора для сортировки по подмножествам D1, D0, D2
+            vector<int> tempD1, tempD0, tempD2;
+
+            //Распределяем детали по подмножествам D1, D0, D2
+            for (int detail : sameLambdaDetails) {
+                if (find(D1.begin(), D1.end(), detail) != D1.end()) {
+                    tempD1.push_back(detail);
+                }
+                else if (find(D0.begin(), D0.end(), detail) != D0.end()) {
+                    tempD0.push_back(detail);
+                }
+                else if (find(D2.begin(), D2.end(), detail) != D2.end()) {
+                    tempD2.push_back(detail);
+                }
+            }
+
+            //Сортируем детали в D1 по возрастанию Pi1
+            sort(tempD1.begin(), tempD1.end(), [&](int a, int b) {
+                return parameters[a - 1][1] < parameters[b - 1][1];
+                });
+
+            //Сортируем детали в D0 по возрастанию Pi1
+            sort(tempD0.begin(), tempD0.end(), [&](int a, int b) {
+                return parameters[a - 1][1] < parameters[b - 1][1];
+                });
+
+            //Сортируем детали в D2 по убыванию Pi2
+            sort(tempD2.begin(), tempD2.end(), [&](int a, int b) {
+                return parameters[a - 1][2] > parameters[b - 1][2];
+                });
+
+            //Вставляем отсортированные детали в orderTable
+            for (int detail : tempD1) {
+                orderTable[index++][1] = detail;
+            }
+            for (int detail : tempD0) {
+                orderTable[index++][1] = detail;
+            }
+            for (int detail : tempD2) {
+                orderTable[index++][1] = detail;
+            }
+        }
+        else {
+            //Если в группе всего одна деталь, просто вставляем её в orderTable
+            orderTable[index++][1] = sameLambdaDetails[0];
+        }
+    }
+}
+
+//Функция для заполнения третьего столбца по третьему правилу Петрова
+void rule3(vector<vector<int>>& parameters, const vector<int>& D1, const vector<int>& D0, const vector<int>& D2, vector<vector<int>>& orderTable) {
+    //Сортируем детали в D1 по возрастанию P1
+    vector<int> sortedD1 = D1;
+    sort(sortedD1.begin(), sortedD1.end(), [&](int a, int b) {
+        return parameters[a - 1][1] < parameters[b - 1][1];
+        });
+
+    //Сортируем детали в D0 по возрастанию P1
+    vector<int> sortedD0 = D0;
+    sort(sortedD0.begin(), sortedD0.end(), [&](int a, int b) {
+        return parameters[a - 1][1] < parameters[b - 1][1];
+        });
+
+    //Сортируем детали в D2 по убыванию P2
+    vector<int> sortedD2 = D2;
+    sort(sortedD2.begin(), sortedD2.end(), [&](int a, int b) {
+        return parameters[a - 1][2] > parameters[b - 1][2];
+        });
+
+    int index = 0;
+    for (int detail : sortedD1) {
+        orderTable[index++][2] = detail;
+    }
+    for (int detail : sortedD0) {
+        orderTable[index++][2] = detail;
+    }
+    for (int detail : sortedD2) {
+        orderTable[index++][2] = detail;
+    }
+}
+
+
+
 void fillOrderTable(vector<vector<int>>& orderTable, vector<vector<int>>& parameters, vector<int>& D0, vector<int>& D1, vector<int>& D10, vector<int>& D2) {
-    rule1(parameters, D10, D2, orderTable[0]); //Заполняем 1 столбец по 1 правилу
-    //rule2(parameters, orderTable[1]);          // Заполняем 2 столбец
-    //rule3(parameters, D1, D0, D2, orderTable[2]); // Заполняем 3 столбец
-    //rule4(parameters, D1, D0, D2, orderTable[3]); // Заполняем 4 столбец
+    rule1(parameters, D10, D2, orderTable); //Заполняем 1 столбец по 1 правилу
+    rule2(parameters, D1, D0, D2, orderTable); //Заполняем 2 столбец по 2 правилу
+    rule3(parameters, D1, D0, D2, orderTable); //Заполняем 3 столбец по 3 правилу
+    //rule4(parameters, D1, D0, D2, orderTable[3]); //Заполняем 4 столбец по 4 правилу
 }
 
 
@@ -224,8 +331,8 @@ int main() {
     cout << endl << endl;
 
     vector<vector<int>> orderTable(details, vector<int>(4)); //Таблица с порядками деталей, определёнными согласно правилам Петрова
-    //fillOrderTable(orderTable, parameters, D0, D1, D10, D2);
-    //printTableWithParamAndOrder(table, parameters, orderTable, machines);
+    fillOrderTable(orderTable, parameters, D0, D1, D10, D2);
+    printTableWithParamAndOrder(table, parameters, orderTable, machines);
 
     cout << endl << endl;
     return 0;
