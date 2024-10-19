@@ -190,7 +190,7 @@ void rule1(vector<vector<int>>& parameters, vector<int>& D10, vector<int>& D2, v
     }
 }
 
-// Функция для заполнения второго столбца по второму правилу Петрова
+//Функция для заполнения второго столбца по второму правилу Петрова
 void rule2(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, vector<int>& D2, vector<vector<int>>& orderTable) {
     //Собираем все детали в один массив
     vector<int> allDetails;
@@ -265,7 +265,7 @@ void rule2(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, ve
 }
 
 //Функция для заполнения третьего столбца по третьему правилу Петрова
-void rule3(vector<vector<int>>& parameters, const vector<int>& D1, const vector<int>& D0, const vector<int>& D2, vector<vector<int>>& orderTable) {
+void rule3(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, vector<int>& D2, vector<vector<int>>& orderTable) {
     //Сортируем детали в D1 по возрастанию P1
     vector<int> sortedD1 = D1;
     sort(sortedD1.begin(), sortedD1.end(), [&](int a, int b) {
@@ -296,13 +296,189 @@ void rule3(vector<vector<int>>& parameters, const vector<int>& D1, const vector<
     }
 }
 
+//Функция для заполнения четвёртого столбца по четвёртому правилу Петрова
+void rule4(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, vector<int>& D2, vector<vector<int>>& orderTable) {
+    vector<pair<int, int>> pairsD1, pairsD0, pairsD2;
+    vector<int> tempD0 = D0;
+    vector<int> tempD2 = D2;
+    int leftoverD1 = -1, leftoverD0 = -1, leftoverD2 = -1;
+
+    if (!D1.empty()) {
+        vector<int> sortedD1_byP2 = D1;
+        vector<int> sortedD1_byP1 = D1;
+
+        //Сортируем D1 по убыванию P2
+        sort(sortedD1_byP2.begin(), sortedD1_byP2.end(), [&](int a, int b) {
+            return parameters[a - 1][2] > parameters[b - 1][2];
+            });
+
+        //Сортируем D1 по возрастанию P1
+        sort(sortedD1_byP1.begin(), sortedD1_byP1.end(), [&](int a, int b) {
+            return parameters[a - 1][1] < parameters[b - 1][1];
+            });
+
+        //Создаём пары в D1
+        int sizeD1 = D1.size();
+        for (int i = 0; i < sizeD1 / 2; i++) {
+            int first = sortedD1_byP2.front(); //Первый элемент пары — по наибольшему P2
+            sortedD1_byP2.erase(sortedD1_byP2.begin());
+            sortedD1_byP1.erase(find(sortedD1_byP1.begin(), sortedD1_byP1.end(), first));
+            int second = sortedD1_byP1.front(); //Второй элемент пары — по наименьшему P1
+            sortedD1_byP1.erase(sortedD1_byP1.begin());
+            sortedD1_byP2.erase(find(sortedD1_byP2.begin(), sortedD1_byP2.end(), second));
+            pairsD1.push_back({ first, second }); //Формируем пару
+        }
+
+        //Если количество деталей в D1 нечётное, соединяем оставшуюся деталь с элементом из D0 или D2
+        if (sizeD1 % 2 != 0) {
+            leftoverD1 = sortedD1_byP2.front(); //Непарная деталь
+
+            //Пытаемся найти пару из D0 по минимуму P1
+            if (!tempD0.empty()) {
+                //Сортируем D0 по возрастанию P1
+                sort(tempD0.begin(), tempD0.end(), [&](int a, int b) {
+                    return parameters[a - 1][1] < parameters[b - 1][1];
+                    });
+                pairsD1.push_back({ leftoverD1, tempD0[0] }); //Пара с непарной деталью из D1
+                tempD0.erase(tempD0.begin()); //Удаляем использованную деталь из D0
+            }
+            //Если D0 пусто, ищем в D2
+            else if (!tempD2.empty()) {
+                //Сортируем D2 по возрастанию P1
+                sort(tempD2.begin(), tempD2.end(), [&](int a, int b) {
+                    return parameters[a - 1][1] < parameters[b - 1][1];
+                    });
+                pairsD1.push_back({ leftoverD1, tempD2[0] }); //Пара с непарной деталью из D1
+                tempD2.erase(tempD2.begin()); //Удаляем использованную деталь из D2
+            }
+        }
+        if (pairsD1.size() % 2 == 0) {
+            //Упорядочиваем пары D1 по убыванию разности (P2 - P1)
+            sort(pairsD1.begin(), pairsD1.end(), [&](pair<int, int> a, pair<int, int> b) {
+                int diffA = parameters[a.first - 1][2] - parameters[a.second - 1][1]; //Разность P2 - P1 для первой пары
+                int diffB = parameters[b.first - 1][2] - parameters[b.second - 1][1]; //Разность P2 - P1 для второй пары
+                return diffA > diffB; //По убыванию разности
+                });
+        }
+    }
+
+    if (!tempD0.empty()) {
+        vector<int> sortedD0_byP2 = tempD0;
+        vector<int> sortedD0_byP1 = tempD0;
+
+        //Сортируем D0 по убыванию P2
+        sort(sortedD0_byP2.begin(), sortedD0_byP2.end(), [&](int a, int b) {
+            return parameters[a - 1][2] > parameters[b - 1][2];
+            });
+
+        //Сортируем D0 по возрастанию P1
+        sort(sortedD0_byP1.begin(), sortedD0_byP1.end(), [&](int a, int b) {
+            return parameters[a - 1][1] < parameters[b - 1][1];
+            });
+
+        //Создаём пары в D0
+        int sizeD0 = tempD0.size();
+        for (int i = 0; i < sizeD0 / 2; i++) {
+            int first = sortedD0_byP2.front(); //Первый элемент пары — по наибольшему P2
+            sortedD0_byP2.erase(sortedD0_byP2.begin());
+            sortedD0_byP1.erase(find(sortedD0_byP1.begin(), sortedD0_byP1.end(), first));
+            int second = sortedD0_byP1.front(); //Второй элемент пары — по наименьшему P1
+            sortedD0_byP1.erase(sortedD0_byP1.begin());
+            sortedD0_byP2.erase(find(sortedD0_byP2.begin(), sortedD0_byP2.end(), second));
+            pairsD0.push_back({ first, second }); //Формируем пару
+        }
+
+        //Если количество деталей в D0 нечётное, соединяем оставшуюся деталь с элементом из D2, если оно есть
+        if (sizeD0 % 2 != 0) {
+            leftoverD0 = sortedD0_byP2.front(); //Непарная деталь
+
+            //Пытаемся найти пару из D2
+            if (!tempD2.empty()) {
+                //Сортируем D2 по возрастанию P1
+                sort(tempD2.begin(), tempD2.end(), [&](int a, int b) {
+                    return parameters[a - 1][1] < parameters[b - 1][1];
+                    });
+                pairsD0.push_back({ leftoverD0, tempD2[0] }); //Пара с непарной деталью из D1
+                tempD2.erase(tempD2.begin()); //Удаляем использованную деталь из D2
+            }
+        }
+        if (pairsD0.size() % 2 == 0) {
+            //Упорядочиваем пары D0 по убыванию разности (P2 - P1)
+            sort(pairsD0.begin(), pairsD0.end(), [&](pair<int, int> a, pair<int, int> b) {
+                int diffA = parameters[a.first - 1][2] - parameters[a.second - 1][1]; //Разность P2 - P1 для первой пары
+                int diffB = parameters[b.first - 1][2] - parameters[b.second - 1][1]; //Разность P2 - P1 для второй пары
+                return diffA > diffB; //По убыванию разности
+                });
+        }
+    }
+
+    if (!tempD2.empty()) {
+        vector<int> sortedD2_byP2 = tempD2;
+        vector<int> sortedD2_byP1 = tempD2;
+
+        //Сортируем D2 по убыванию P2
+        sort(sortedD2_byP2.begin(), sortedD2_byP2.end(), [&](int a, int b) {
+            return parameters[a - 1][2] > parameters[b - 1][2];
+            });
+
+        //Сортируем D2 по возрастанию P1
+        sort(sortedD2_byP1.begin(), sortedD2_byP1.end(), [&](int a, int b) {
+            return parameters[a - 1][1] < parameters[b - 1][1];
+            });
+
+        //Создаём пары в D2
+        int sizeD2 = tempD2.size();
+        for (int i = 0; i < sizeD2 / 2; i++) {
+            int first = sortedD2_byP2.front(); //Первый элемент пары — по наибольшему P2
+            sortedD2_byP2.erase(sortedD2_byP2.begin());
+            sortedD2_byP1.erase(find(sortedD2_byP1.begin(), sortedD2_byP1.end(), first));
+            int second = sortedD2_byP1.front(); //Второй элемент пары — по наименьшему P1
+            sortedD2_byP1.erase(sortedD2_byP1.begin());
+            sortedD2_byP2.erase(find(sortedD2_byP2.begin(), sortedD2_byP2.end(), second));
+            pairsD2.push_back({ first, second }); //Формируем пару
+        }
+
+        //Если количество деталей в D2 нечётное
+        if (sizeD2 % 2 != 0) {
+            leftoverD2 = sortedD2_byP2.front(); //Непарная деталь
+        }
+
+        //Упорядочиваем пары D2 по убыванию разности (P2 - P1)
+        sort(pairsD2.begin(), pairsD2.end(), [&](pair<int, int> a, pair<int, int> b) {
+            int diffA = parameters[a.first - 1][2] - parameters[a.second - 1][1]; //Разность P2 - P1 для первой пары
+            int diffB = parameters[b.first - 1][2] - parameters[b.second - 1][1]; //Разность P2 - P1 для второй пары
+            return diffA > diffB; //По убыванию разности
+            });
+    }
+
+    //Заполняем orderTable результатами
+    int index = 0;
+    for (auto& p : pairsD1) {
+        orderTable[index++][3] = p.first;
+        orderTable[index++][3] = p.second;
+    }
+    for (auto& p : pairsD0) {
+        orderTable[index++][3] = p.first;
+        orderTable[index++][3] = p.second;
+    }
+    for (auto& p : pairsD2) {
+        orderTable[index++][3] = p.first;
+        orderTable[index++][3] = p.second;
+    }
+
+    //Если осталась непарная деталь
+    if (leftoverD1 != -1 || leftoverD0 != -1 || leftoverD2 != -1) {
+        //orderTable[index][3] = leftoverD2;
+
+    }
+}
 
 
 void fillOrderTable(vector<vector<int>>& orderTable, vector<vector<int>>& parameters, vector<int>& D0, vector<int>& D1, vector<int>& D10, vector<int>& D2) {
     rule1(parameters, D10, D2, orderTable); //Заполняем 1 столбец по 1 правилу
     rule2(parameters, D1, D0, D2, orderTable); //Заполняем 2 столбец по 2 правилу
     rule3(parameters, D1, D0, D2, orderTable); //Заполняем 3 столбец по 3 правилу
-    //rule4(parameters, D1, D0, D2, orderTable[3]); //Заполняем 4 столбец по 4 правилу
+    rule4(parameters, D1, D0, D2, orderTable); //Заполняем 4 столбец по 4 правилу
 }
 
 
