@@ -508,7 +508,7 @@ void rule4(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, ve
     }
 }
 
-
+//Заполнение таблицы по правилам Петрова
 void fillOrderTable(vector<vector<int>>& orderTable, vector<vector<int>>& parameters, vector<int>& D0, vector<int>& D1, vector<int>& D10, vector<int>& D2) {
     rule1(parameters, D10, D2, orderTable); //Заполняем 1 столбец по 1 правилу
     rule2(parameters, D1, D0, D2, orderTable); //Заполняем 2 столбец по 2 правилу
@@ -516,6 +516,27 @@ void fillOrderTable(vector<vector<int>>& orderTable, vector<vector<int>>& parame
     rule4(parameters, D1, D0, D2, orderTable); //Заполняем 4 столбец по 4 правилу
 }
 
+//Функция взятия порядка по определённому столбцу
+vector<int> getProcessingOrder(vector<vector<int>>& table, int column) {
+    vector<int> order;
+
+    for (const auto& row : table) {
+        order.push_back(row[column]);
+    }
+
+    return order;
+}
+
+//Функция реструктуризации таблицы порядка обработки деталей по заданному порядку
+vector<vector<int>> reorderTableByOrder(vector<vector<int>>& table, vector<int>& order) {
+    vector<vector<int>> newTable;
+
+    for (int index : order) {
+        newTable.push_back(table[index - 1]);
+    }
+
+    return newTable;
+}
 
 int main() {
     SetConsoleCP(1251);
@@ -544,6 +565,10 @@ int main() {
     vector<vector<int>> orderTable(details, vector<int>(4)); //Таблица с порядками деталей, определёнными согласно правилам Петрова
     fillOrderTable(orderTable, parameters, D0, D1, D10, D2);
     printTableWithParamAndOrder(table, parameters, orderTable, machines);
+    cout << endl << endl;
+    //vector<int> rule1Order = getProcessingOrder(orderTable, 1);
+    //vector<vector<int>> rule1Table = reorderTableByOrder(table, rule1Order);
+    //printTable(rule1Table, machines);
 
     cout << endl << endl;
     return 0;
