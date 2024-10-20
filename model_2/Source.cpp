@@ -473,7 +473,38 @@ void rule4(vector<vector<int>>& parameters, vector<int>& D1, vector<int>& D0, ve
         if (leftoverD0 != -1) leftover = leftoverD0;
         if (leftoverD2 != -1) leftover = leftoverD2;
         int lmbX = parameters[leftover - 1][3];
-        
+        bool isInsert = false;
+        for (int i = 0; i < parameters.size() - 3; i+=2) {
+            int lmb1 = parameters[orderTable[i][3] - 1][3]; //lambda для i-го элемента
+            int lmb2 = parameters[orderTable[i + 1][3] - 1][3]; //lambda для (i+1)-го элемента
+            int lmb3 = parameters[orderTable[i + 2][3] - 1][3]; //lambda для (i+2)-го элемента
+            int lmb4 = parameters[orderTable[i + 3][3] - 1][3]; //lambda для (i+3)-го элемента
+
+            //Проверяем условие вставки
+            if (max(lmb1, lmb2) >= lmbX && lmbX >= min(lmb3, lmb4)) {
+                for (int j = parameters.size() - 1; j > i + 2; j--) {
+                    orderTable[j][3] = orderTable[j - 1][3];
+                }
+                orderTable[i + 2][3] = leftover;
+                isInsert = true;
+                break;
+            }  
+        }
+        if (!isInsert) {
+            if (lmbX <= max(parameters[orderTable[parameters.size()-3][3] - 1][3], parameters[orderTable[parameters.size() - 2][3] - 1][3])) {
+                //Вставляем непарную деталь в конец 4-го столбца
+                orderTable[parameters.size() - 1][3] = leftover;
+                isInsert = true;
+            }
+        }
+        if (!isInsert) {
+            //Сдвигаем все элементы 4-го столбца на одну позицию вниз
+            for (int i = parameters.size() - 1; i > 0; i--) {
+                orderTable[i][3] = orderTable[i - 1][3];
+            }
+            //Вставляем непарную деталь в начало 4-го столбца
+            orderTable[0][3] = leftover;
+        }
     }
 }
 
