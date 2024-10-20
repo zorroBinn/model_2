@@ -538,12 +538,80 @@ vector<vector<int>> reorderTableByOrder(vector<vector<int>>& table, vector<int>&
     return newTable;
 }
 
+//Функция для генерации всех возможных последовательностей (перестановок)
+vector<vector<int>> generateAllPermutations(int details) {
+    vector<vector<int>> allPermutations; //Вектор для хранения всех перестановок
+    vector<int> currentOrder; //Вектор для хранения текущей перестановки
+
+    for (int i = 1; i <= details; i++) {
+        currentOrder.push_back(i);
+    }
+
+    do {
+        allPermutations.push_back(currentOrder); // Добавляем текущую перестановку в итоговый вектор
+    } while (next_permutation(currentOrder.begin(), currentOrder.end()));
+
+    return allPermutations;
+}
+
+//Функция расчета параметров Tij и возврата Tnm
+int calculateTij(vector<vector<int>>& tableTij, vector<vector<int>>& table) {
+    int n = tableTij.size();
+    int m = tableTij[0].size() - 1;
+    for (int i = 0; i < n; i++) {
+        tableTij[i][0] = table[i][0];
+    }
+    return 0;
+}
+
+//Функция получения вектора ожидания деталей
+vector<int> getToj(vector<vector<int>>& tableTij) {
+    vector<int> Toj;
+    for (const auto& row : tableTij) {
+        
+    }
+
+    return Toj;
+}
+
+
+//Функция получения вектора простоя станков
+vector<int> getTpr(vector<vector<int>>& tableTij) {
+    vector<int> Tpr;
+    
+
+
+    return Tpr;
+}
+
+//Функция вывода таблицы значений окончания обработки деталей
+void printTijTable(vector<vector<int>>& tableTij, vector<int>& tableToj, vector<int>& tableTpr, int machines) {
+    for (int i = -1; i < machines + 1; i++) {
+        if (i == -1) cout << setw(3) << static_cast<char>('i') << " ";
+        else if (i < machines) cout << setw(3) << static_cast<char>('A' + i) << " ";
+        else if (i == machines) cout << setw(3) << "Toj" << " ";
+    }
+    cout << endl;
+    int index = 0;
+    for (const auto& row : tableTij) {
+        for (const auto& col : row) {
+            cout << setw(3) << col << " ";
+        }
+        cout << setw(3) << tableToj[index++] << " ";
+        cout << endl;
+    }
+    for (int i = 0; i < tableTpr.size() - 1; i++) {
+        cout << setw(3) << tableTpr[i] << " ";
+    }
+    cout << setw(3) << tableTpr[tableTpr.size() - 1] << " / " << tableToj[tableToj.size() - 1] << endl;
+}
+
 int main() {
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
+    
     vector<vector<int>> table; //Исходная таблица значений
     vector<vector<int>> parameters; //Таблица с параметрами P1, P2, lambda
-    
     vector<int> D0, D1, D10, D2; //Подмножества D0, D1, D10, D2
     int machines, details; //Кол-во станков и деталей
 
@@ -566,9 +634,42 @@ int main() {
     fillOrderTable(orderTable, parameters, D0, D1, D10, D2);
     printTableWithParamAndOrder(table, parameters, orderTable, machines);
     cout << endl << endl;
-    //vector<int> rule1Order = getProcessingOrder(orderTable, 1);
-    //vector<vector<int>> rule1Table = reorderTableByOrder(table, rule1Order);
-    //printTable(rule1Table, machines);
+    //Порядки обработки деталей
+    vector<int> rule1Order = getProcessingOrder(orderTable, 0);
+    vector<int> rule2Order = getProcessingOrder(orderTable, 1);
+    vector<int> rule3Order = getProcessingOrder(orderTable, 2);
+    vector<int> rule4Order = getProcessingOrder(orderTable, 3);
+    //Таблицы обработки деталей по заданным порядкам
+    vector<vector<int>> rule1Table = reorderTableByOrder(table, rule1Order);
+    vector<vector<int>> rule2Table = reorderTableByOrder(table, rule2Order);
+    vector<vector<int>> rule3Table = reorderTableByOrder(table, rule3Order);
+    vector<vector<int>> rule4Table = reorderTableByOrder(table, rule4Order);
+    //Таблицы Tij для таблиц обработки деталей по заданным порядкам
+    vector<vector<int>> tableTij(details, vector<int>(machines + 1));
+    vector<vector<int>> rule1Tij(details, vector<int>(machines + 1));
+    vector<vector<int>> rule2Tij(details, vector<int>(machines + 1));
+    vector<vector<int>> rule3Tij(details, vector<int>(machines + 1));
+    vector<vector<int>> rule4Tij(details, vector<int>(machines + 1));
+    //Время технологического процесса для таблиц обработки деталей по заданным порядкам
+    int Ttc = calculateTij(tableTij, table);
+    int Ttc1 = calculateTij(rule1Tij, table);
+    int Ttc2 = calculateTij(rule2Tij, table);
+    int Ttc3 = calculateTij(rule3Tij, table);
+    int Ttc4 = calculateTij(rule4Tij, table);
+    //Времена ожиданий деталей для таблиц обработки деталей по заданным порядкам
+    vector<int> tableToj = getToj(tableTij);
+    vector<int> rule1Toj = getToj(rule1Tij);
+    vector<int> rule2Toj = getToj(rule2Tij);
+    vector<int> rule3Toj = getToj(rule3Tij);
+    vector<int> rule4Toj = getToj(rule4Tij);
+    //Времена простоя станков для таблиц обработки деталей по заданным порядкам
+    vector<int> tableTpr = getTpr(tableTij);
+    vector<int> rule1Tpr = getTpr(rule1Tij);
+    vector<int> rule2Tpr = getTpr(rule2Tij);
+    vector<int> rule3Tpr = getTpr(rule3Tij);
+    vector<int> rule4Tpr = getTpr(rule4Tij);
+
+    //printTable(tableTij, machines);
 
     cout << endl << endl;
     return 0;
