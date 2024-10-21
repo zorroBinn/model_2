@@ -662,7 +662,7 @@ struct SequenceInfo {
 };
 
 //Функция для поиска оптимальной последовательности
-void findOptimalSequence(int Ttc1, int Ttc2, int Ttc3, int Ttc4, vector<int>& Toj1, vector<int>& Toj2, vector<int>& Toj3, vector<int>& Toj4, vector<int>& Tpr1, vector<int>& Tpr2, vector<int>& Tpr3, vector<int>& Tpr4, vector<vector<int>>& orderTable) {
+int findOptimalSequence(int Ttc1, int Ttc2, int Ttc3, int Ttc4, vector<int>& Toj1, vector<int>& Toj2, vector<int>& Toj3, vector<int>& Toj4, vector<int>& Tpr1, vector<int>& Tpr2, vector<int>& Tpr3, vector<int>& Tpr4, vector<vector<int>>& orderTable) {
 
     vector<SequenceInfo> sequences = {
         {1, Ttc1, Toj1.back(), Tpr1.back()},
@@ -691,7 +691,35 @@ void findOptimalSequence(int Ttc1, int Ttc2, int Ttc3, int Ttc4, vector<int>& To
     vector<int> optimaleRuleOrder = getProcessingOrder(orderTable, optimalSeq.index - 1);
     for_each(optimaleRuleOrder.begin(), optimaleRuleOrder.end(), [](int x) { cout << x << " "; });
     cout << endl << endl;
+    return optimalSeq.index;
 }
+
+//Текстовая визуализация Графика Ганта для NxM
+void GanttGraph(vector<vector<int>>& table, vector<vector<int>>& tableTij, int details, int machines) {
+    for (int machine = 0; machine < machines; machine++) {
+        cout << setw(2) << static_cast<char>('A' + machine) << "| ";
+
+        int currentTime = 0;
+
+        //Проходим по всем деталям
+        for (int detail = 0; detail < details; detail++) {
+            int processingTime = table[detail][machine + 1]; //Время обработки текущей детали на этом станке
+            int startTime = tableTij[detail][machine + 1] - processingTime; //Начало обработки этой детали на станке
+            int endTime = tableTij[detail][machine + 1]; //Время окончания обработки детали на станке
+            //Простой перед началом обработки
+            for (int t = currentTime; t < startTime; t++) {
+                cout << "x"; //Простой
+            }
+            //Обработка детали
+            for (int t = startTime; t < endTime; t++) {
+                cout << detail + 1; //Номер детали (выводим с 1)
+            }
+            currentTime = endTime;
+        }
+        cout << endl;
+    }
+}
+
 
 int main() {
     SetConsoleCP(1251);
@@ -705,12 +733,13 @@ int main() {
     readDataFromFile("input.txt", table, details, machines);
     cout << "Исходная таблица значений:" << endl;
     printTable(table, machines);
-    cout << endl << endl;
+    cout << endl;
 
     calculateParameters(table, parameters, details, machines);
     distributeDetails(parameters, D0, D1, D10, D2);
     vector<vector<int>> orderTable(details, vector<int>(4)); //Таблица с порядками деталей, определёнными согласно правилам Петрова
     fillOrderTable(orderTable, parameters, D0, D1, D10, D2);
+    cout << "Таблица с параметрами и вариантами последовательностей на основе исходной таблицы значений:" << endl;
     printTableWithParamAndOrder(table, parameters, orderTable, machines);
     cout << endl;
     
@@ -757,6 +786,10 @@ int main() {
     cout << "Таблица совокупной длительности цикла матричным методом для исходного порядка:" << endl;
     printTijTable(table, tableTij, tableToj, tableTpr, machines); cout << endl;
     cout << "Ттц у исходной последовательности: " << Ttc << endl << endl;
+    cout << "График Ганта для исходной последовательности:" << endl;
+    GanttGraph(table, tableTij, details, machines);
+    cout << endl;
+
     cout << "Таблица совокупной длительности цикла матричным методом для 1-ого правила:" << endl;
     printTijTable(rule1Table, rule1Tij, rule1Toj, rule1Tpr, machines); cout << endl;
     cout << "Таблица совокупной длительности цикла матричным методом для 2-ого правила:" << endl;
@@ -766,8 +799,26 @@ int main() {
     cout << "Таблица совокупной длительности цикла матричным методом для 4-ого правила:" << endl;
     printTijTable(rule4Table, rule4Tij, rule4Toj, rule4Tpr, machines); cout << endl;
 
-    findOptimalSequence(Ttc1, Ttc2, Ttc3, Ttc4, rule1Toj, rule2Toj, rule3Toj, rule4Toj, rule1Tpr, rule2Tpr, rule3Tpr, rule4Tpr, orderTable);
-    
+    int optimalSequence = findOptimalSequence(Ttc1, Ttc2, Ttc3, Ttc4, rule1Toj, rule2Toj, rule3Toj, rule4Toj, rule1Tpr, rule2Tpr, rule3Tpr, rule4Tpr, orderTable);
+    switch (optimalSequence) {
+    case 1: {
+        cout << "График Ганта для исходной последовательности, полученная по правилу 1:" << endl;
+        GanttGraph(rule1Table, rule1Tij, details, machines);
+    }
+    case 2: {
+        cout << "График Ганта для исходной последовательности, полученная по правилу 2:" << endl;
+        GanttGraph(rule2Table, rule2Tij, details, machines);
+    }
+    case 3: {
+        cout << "График Ганта для исходной последовательности, полученная по правилу 3:" << endl;
+        GanttGraph(rule3Table, rule3Tij, details, machines);
+    }
+    case 4: {
+        cout << "График Ганта для исходной последовательности, полученная по правилу 4:" << endl;
+        GanttGraph(rule4Table, rule4Tij, details, machines);
+    }
+    }
+    cout << endl;
 
     int minTtc = Ttc, minT_PermitationsIndex = 0;
     cout << "Решение перебором:" << endl;
@@ -794,7 +845,8 @@ int main() {
     cout << "Таблица совокупной длительности цикла матричным методом для оптимального порядка:" << endl;
     printTijTable(optimalTable, optimalTableTij, optimalTableToj, optimalTableTpr, machines); cout << endl;
     cout << "Tтц оптимального порядка = " << optimalTtc << endl;
-
+    cout << "График Ганта для оптимального порядка:" << endl;
+    GanttGraph(optimalTable, optimalTableTij, details, machines);
     cout << endl << endl;
     return 0;
 }
