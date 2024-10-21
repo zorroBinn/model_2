@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <algorithm>
+#include <ctime>
 using namespace std;
 
 //Функция чтения исходной таблицы значений из файла
@@ -579,7 +580,15 @@ int calculateTij(vector<vector<int>>& tableTij, vector<vector<int>>& table) {
             }
             //В общем случае учитываем максимум из времени окончания обработки предыдущей детали на текущем станке и текущей детали на предыдущем станке
             else {
-                tableTij[i][j] = t_ij + max(tableTij[i - 1][j], tableTij[i][j - 1]);
+                int maxHeightTij = 0, maxLeftTij = 0;
+                for (int h = i - 1; h >= 0; h--) {
+                    if (tableTij[h][j] > maxHeightTij && table[h][j] != 0) maxHeightTij = tableTij[h][j];
+                }
+                for (int l = j - 1; l >= 1; l--) {
+                    if (tableTij[i][l] > maxLeftTij && table[i][l] != 0) maxLeftTij = tableTij[i][l];
+                }
+                tableTij[i][j] = t_ij + max(maxHeightTij, maxLeftTij);
+
             }
         }
     }
@@ -635,23 +644,23 @@ vector<int> getTpr(vector<vector<int>>& tableTij, vector<vector<int>>& table) {
 void printTijTable(vector<vector<int>>& table, vector<vector<int>>& tableTij, vector<int>& tableToj, vector<int>& tableTpr, int machines) {
     for (int i = -1; i < machines + 1; i++) {
         if (i == -1) cout << setw(3) << static_cast<char>('i') << " ";
-        else if (i < machines) cout << setw(6) << static_cast<char>('A' + i) << " ";
+        else if (i < machines) cout << setw(7) << static_cast<char>('A' + i) << " ";
         else if (i == machines) cout << setw(7) << "Toj" << " ";
     }
     cout << endl;
     for (int i = 0; i < table.size(); i++) {
         for (int j = 0; j <= machines; j++) {
             if (!j) cout << setw(3) << table[i][j] << " ";
-            else if (table[i][j]) cout << setw(3) << table[i][j] << "/" << setw(2) << tableTij[i][j] << " ";
-            else if (!table[i][j]) cout << setw(3) << table[i][j] << "/" << setw(3) << " ";
+            else if (table[i][j]) cout << setw(3) << table[i][j] << "/" << setw(3) << tableTij[i][j] << " ";
+            else if (!table[i][j]) cout << setw(3) << table[i][j] << "/" << setw(4) << " ";
         }
         cout << setw(7) << tableToj[i] << endl;
     }
     cout << setw(3) << "Tpr" << " ";
     for (int i = 0; i < tableTpr.size() - 1; i++) {
-        cout << setw(6) << tableTpr[i] << " ";
+        cout << setw(7) << tableTpr[i] << " ";
     }
-    cout << setw(4) << tableTpr[tableTpr.size() - 1] << "\\" << tableToj[tableToj.size() - 1] << endl;
+    cout << setw(5) << tableTpr[tableTpr.size() - 1] << "\\" << tableToj[tableToj.size() - 1] << endl;
 }
 
 struct SequenceInfo {
@@ -703,23 +712,24 @@ void GanttGraph(vector<vector<int>>& table, vector<vector<int>>& tableTij, int d
 
         //Проходим по всем деталям
         for (int detail = 0; detail < details; detail++) {
+            int detailNumber = table[detail][0];
+            if (table[detail][machine + 1] == 0) continue;
             int processingTime = table[detail][machine + 1]; //Время обработки текущей детали на этом станке
             int startTime = tableTij[detail][machine + 1] - processingTime; //Начало обработки этой детали на станке
             int endTime = tableTij[detail][machine + 1]; //Время окончания обработки детали на станке
             //Простой перед началом обработки
             for (int t = currentTime; t < startTime; t++) {
-                cout << "x"; //Простой
+                cout << "-"; //Простой
             }
             //Обработка детали
             for (int t = startTime; t < endTime; t++) {
-                cout << detail + 1; //Номер детали (выводим с 1)
+                cout << detailNumber;
             }
             currentTime = endTime;
         }
         cout << endl;
     }
 }
-
 
 int main() {
     SetConsoleCP(1251);
@@ -804,18 +814,22 @@ int main() {
     case 1: {
         cout << "График Ганта для исходной последовательности, полученная по правилу 1:" << endl;
         GanttGraph(rule1Table, rule1Tij, details, machines);
+        break;
     }
     case 2: {
         cout << "График Ганта для исходной последовательности, полученная по правилу 2:" << endl;
         GanttGraph(rule2Table, rule2Tij, details, machines);
+        break;
     }
     case 3: {
         cout << "График Ганта для исходной последовательности, полученная по правилу 3:" << endl;
         GanttGraph(rule3Table, rule3Tij, details, machines);
+        break;
     }
     case 4: {
         cout << "График Ганта для исходной последовательности, полученная по правилу 4:" << endl;
         GanttGraph(rule4Table, rule4Tij, details, machines);
+        break;
     }
     }
     cout << endl;
@@ -847,6 +861,22 @@ int main() {
     cout << "Tтц оптимального порядка = " << optimalTtc << endl;
     cout << "График Ганта для оптимального порядка:" << endl;
     GanttGraph(optimalTable, optimalTableTij, details, machines);
+    cout << endl << endl;
+
+    srand(time(nullptr));
+    cout << "Случайная последовательность: " << endl;
+    vector<int> randomOrder = allPermutations[rand() % (allPermutations.size())];
+    for_each(randomOrder.begin(), randomOrder.end(), [](int x) { cout << x << " "; });
+    cout << endl;
+    vector<vector<int>> randomTable = reorderTableByOrder(table, randomOrder);
+    vector<vector<int>> randomTableTij(details, vector<int>(machines + 1));
+    int randomTtc = calculateTij(randomTableTij, randomTable);
+    vector<int> randomTableToj = getToj(randomTableTij, randomTable);
+    vector<int> randomTableTpr = getTpr(randomTableTij, randomTable);
+    cout << "Таблица совокупной длительности цикла матричным методом для случайного порядка:" << endl;
+    printTijTable(randomTable, randomTableTij, randomTableToj, randomTableTpr, machines); cout << endl;
+    cout << "Tтц случайного порядка = " << randomTtc << endl;
+
     cout << endl << endl;
     return 0;
 }
