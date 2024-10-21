@@ -548,7 +548,7 @@ vector<vector<int>> generateAllPermutations(int details) {
     }
 
     do {
-        allPermutations.push_back(currentOrder); // Добавляем текущую перестановку в итоговый вектор
+        allPermutations.push_back(currentOrder); //Добавляем текущую перестановку в итоговый вектор
     } while (next_permutation(currentOrder.begin(), currentOrder.end()));
 
     return allPermutations;
@@ -561,49 +561,136 @@ int calculateTij(vector<vector<int>>& tableTij, vector<vector<int>>& table) {
     for (int i = 0; i < n; i++) {
         tableTij[i][0] = table[i][0];
     }
-    return 0;
+    //Рассчитываем Tij для каждой детали и каждого станка
+    for (int i = 0; i < n; i++) {
+        for (int j = 1; j <= m; j++) {
+            int t_ij = table[i][j];
+            //Для первой детали и первого станка, время обработки равно самому себе
+            if (i == 0 && j == 1) {
+                tableTij[i][j] = t_ij;
+            }
+            //Если это первая деталь, учитываем только предыдущее время обработки на предыдущем станке
+            else if (i == 0) {
+                tableTij[i][j] = tableTij[i][j - 1] + t_ij;
+            }
+            //Если это первый станок, учитываем только предыдущее время обработки на предыдущей детали
+            else if (j == 1) {
+                tableTij[i][j] = tableTij[i - 1][j] + t_ij;
+            }
+            //В общем случае учитываем максимум из времени окончания обработки предыдущей детали на текущем станке и текущей детали на предыдущем станке
+            else {
+                tableTij[i][j] = t_ij + max(tableTij[i - 1][j], tableTij[i][j - 1]);
+            }
+        }
+    }
+    //Возвращаем значение Tnm - время завершения последней детали на последнем станке
+    return tableTij[n - 1][m];
 }
 
 //Функция получения вектора ожидания деталей
-vector<int> getToj(vector<vector<int>>& tableTij) {
-    vector<int> Toj;
-    for (const auto& row : tableTij) {
-        
+vector<int> getToj(vector<vector<int>>& tableTij, vector<vector<int>>& table) {
+    vector<int> Toj(tableTij.size() + 1, 0); //Вектор для времени ожидания каждой детали + общий результат
+    int n = tableTij.size(); //Количество деталей
+    int m = tableTij[0].size() - 1; //Количество станков
+    int totalToj = 0; //Общая сумма времени ожидания
+
+    for (int i = 0; i < n; i++) {
+        int sum_t_ij = 0; //Сумма времени обработки t_ij для i-ой детали
+        //Суммируем все времена обработки t_ij для i-ой детали на всех станках
+        for (int j = 1; j <= m; j++) {
+            sum_t_ij += table[i][j]; //Используем таблицу с временами t_ij
+        }
+        //Рассчитываем время ожидания для i-ой детали
+        Toj[i] = tableTij[i][m] - sum_t_ij;
+        totalToj += Toj[i];  //Добавляем в общую сумму времени ожидания
     }
+    Toj[n] = totalToj;
 
     return Toj;
 }
 
-
 //Функция получения вектора простоя станков
-vector<int> getTpr(vector<vector<int>>& tableTij) {
-    vector<int> Tpr;
-    
+vector<int> getTpr(vector<vector<int>>& tableTij, vector<vector<int>>& table) {
+    vector<int> Tpr(tableTij[0].size(), 0); //Вектор для времени простоя каждого станка + общий результат
+    int n = tableTij.size(); //Количество деталей
+    int m = tableTij[0].size() - 1; //Количество станков
+    int totalTpr = 0; //Общая сумма времени простоя
 
+    for (int j = 1; j <= m; j++) {
+        int sum_t_ij = 0; //Сумма времени обработки t_ij для всех деталей на j-ом станке
+        //Суммируем все времена обработки t_ij для j-ого станка
+        for (int i = 0; i < n; i++) {
+            sum_t_ij += table[i][j];
+        }
+        //Рассчитываем время простоя для j-ого станка
+        Tpr[j - 1] = tableTij[n - 1][j] - sum_t_ij;
+        totalTpr += Tpr[j - 1];  //Добавляем в общую сумму времени простоя
+    }
+    Tpr[m] = totalTpr;
 
     return Tpr;
 }
 
 //Функция вывода таблицы значений окончания обработки деталей
-void printTijTable(vector<vector<int>>& tableTij, vector<int>& tableToj, vector<int>& tableTpr, int machines) {
+void printTijTable(vector<vector<int>>& table, vector<vector<int>>& tableTij, vector<int>& tableToj, vector<int>& tableTpr, int machines) {
     for (int i = -1; i < machines + 1; i++) {
         if (i == -1) cout << setw(3) << static_cast<char>('i') << " ";
-        else if (i < machines) cout << setw(3) << static_cast<char>('A' + i) << " ";
-        else if (i == machines) cout << setw(3) << "Toj" << " ";
+        else if (i < machines) cout << setw(6) << static_cast<char>('A' + i) << " ";
+        else if (i == machines) cout << setw(7) << "Toj" << " ";
     }
     cout << endl;
-    int index = 0;
-    for (const auto& row : tableTij) {
-        for (const auto& col : row) {
-            cout << setw(3) << col << " ";
+    for (int i = 0; i < table.size(); i++) {
+        for (int j = 0; j <= machines; j++) {
+            if (!j) cout << setw(3) << table[i][j] << " ";
+            else if (table[i][j]) cout << setw(3) << table[i][j] << "/" << setw(2) << tableTij[i][j] << " ";
+            else if (!table[i][j]) cout << setw(3) << table[i][j] << "/" << setw(3) << " ";
         }
-        cout << setw(3) << tableToj[index++] << " ";
-        cout << endl;
+        cout << setw(7) << tableToj[i] << endl;
     }
+    cout << setw(3) << "Tpr" << " ";
     for (int i = 0; i < tableTpr.size() - 1; i++) {
-        cout << setw(3) << tableTpr[i] << " ";
+        cout << setw(6) << tableTpr[i] << " ";
     }
-    cout << setw(3) << tableTpr[tableTpr.size() - 1] << " / " << tableToj[tableToj.size() - 1] << endl;
+    cout << setw(4) << tableTpr[tableTpr.size() - 1] << "\\" << tableToj[tableToj.size() - 1] << endl;
+}
+
+struct SequenceInfo {
+    int index; //Индекс последовательности
+    int Ttc; //Время завершения обработки Ttc
+    int Toj; //Суммарное время ожидания Toj
+    int Tpr; //Суммарное время простоя Tpr
+};
+
+//Функция для поиска оптимальной последовательности
+void findOptimalSequence(int Ttc1, int Ttc2, int Ttc3, int Ttc4, vector<int>& Toj1, vector<int>& Toj2, vector<int>& Toj3, vector<int>& Toj4, vector<int>& Tpr1, vector<int>& Tpr2, vector<int>& Tpr3, vector<int>& Tpr4, vector<vector<int>>& orderTable) {
+
+    vector<SequenceInfo> sequences = {
+        {1, Ttc1, Toj1.back(), Tpr1.back()},
+        {2, Ttc2, Toj2.back(), Tpr2.back()},
+        {3, Ttc3, Toj3.back(), Tpr3.back()},
+        {4, Ttc4, Toj4.back(), Tpr4.back()}
+    };
+
+    //Сортируем последовательности по трем критериям:
+    //1) Минимальный Ttc
+    //2) Минимальный Toj (если Ttc одинаковое)
+    //3) Минимальный Tpr (если и Toj одинаковое)
+    auto optimalSeq = *min_element(sequences.begin(), sequences.end(), [](const SequenceInfo& a, const SequenceInfo& b) {
+        if (a.Ttc != b.Ttc) {
+            return a.Ttc < b.Ttc;
+        }
+        else if (a.Toj != b.Toj) {
+            return a.Toj < b.Toj;
+        }
+        else {
+            return a.Tpr < b.Tpr;
+        }
+        });
+
+    cout << "Оптимальной будет последовательность, полученная по правилу " << optimalSeq.index << " c Tтц = " << optimalSeq.Ttc << " : ";
+    vector<int> optimaleRuleOrder = getProcessingOrder(orderTable, optimalSeq.index - 1);
+    for_each(optimaleRuleOrder.begin(), optimaleRuleOrder.end(), [](int x) { cout << x << " "; });
+    cout << endl << endl;
 }
 
 int main() {
@@ -616,60 +703,97 @@ int main() {
     int machines, details; //Кол-во станков и деталей
 
     readDataFromFile("input.txt", table, details, machines);
-
     cout << "Исходная таблица значений:" << endl;
     printTable(table, machines);
     cout << endl << endl;
 
     calculateParameters(table, parameters, details, machines);
-    cout << "Исходная таблица значений c параметрами:" << endl;
-    printTableWithParam(table, parameters, machines);
-    
     distributeDetails(parameters, D0, D1, D10, D2);
-    cout << "Подмножества деталей:" << endl;
-    printSets(D0, D1, D10, D2);
-    cout << endl << endl;
-
     vector<vector<int>> orderTable(details, vector<int>(4)); //Таблица с порядками деталей, определёнными согласно правилам Петрова
     fillOrderTable(orderTable, parameters, D0, D1, D10, D2);
     printTableWithParamAndOrder(table, parameters, orderTable, machines);
-    cout << endl << endl;
+    cout << endl;
+    
     //Порядки обработки деталей
     vector<int> rule1Order = getProcessingOrder(orderTable, 0);
     vector<int> rule2Order = getProcessingOrder(orderTable, 1);
     vector<int> rule3Order = getProcessingOrder(orderTable, 2);
     vector<int> rule4Order = getProcessingOrder(orderTable, 3);
+    
     //Таблицы обработки деталей по заданным порядкам
     vector<vector<int>> rule1Table = reorderTableByOrder(table, rule1Order);
     vector<vector<int>> rule2Table = reorderTableByOrder(table, rule2Order);
     vector<vector<int>> rule3Table = reorderTableByOrder(table, rule3Order);
     vector<vector<int>> rule4Table = reorderTableByOrder(table, rule4Order);
+    
     //Таблицы Tij для таблиц обработки деталей по заданным порядкам
     vector<vector<int>> tableTij(details, vector<int>(machines + 1));
     vector<vector<int>> rule1Tij(details, vector<int>(machines + 1));
     vector<vector<int>> rule2Tij(details, vector<int>(machines + 1));
     vector<vector<int>> rule3Tij(details, vector<int>(machines + 1));
     vector<vector<int>> rule4Tij(details, vector<int>(machines + 1));
+    
     //Время технологического процесса для таблиц обработки деталей по заданным порядкам
     int Ttc = calculateTij(tableTij, table);
-    int Ttc1 = calculateTij(rule1Tij, table);
-    int Ttc2 = calculateTij(rule2Tij, table);
-    int Ttc3 = calculateTij(rule3Tij, table);
-    int Ttc4 = calculateTij(rule4Tij, table);
+    int Ttc1 = calculateTij(rule1Tij, rule1Table);
+    int Ttc2 = calculateTij(rule2Tij, rule2Table);
+    int Ttc3 = calculateTij(rule3Tij, rule3Table);
+    int Ttc4 = calculateTij(rule4Tij, rule4Table);
+    
     //Времена ожиданий деталей для таблиц обработки деталей по заданным порядкам
-    vector<int> tableToj = getToj(tableTij);
-    vector<int> rule1Toj = getToj(rule1Tij);
-    vector<int> rule2Toj = getToj(rule2Tij);
-    vector<int> rule3Toj = getToj(rule3Tij);
-    vector<int> rule4Toj = getToj(rule4Tij);
+    vector<int> tableToj = getToj(tableTij, table);
+    vector<int> rule1Toj = getToj(rule1Tij, rule1Table);
+    vector<int> rule2Toj = getToj(rule2Tij, rule2Table);
+    vector<int> rule3Toj = getToj(rule3Tij, rule3Table);
+    vector<int> rule4Toj = getToj(rule4Tij, rule4Table);
+    
     //Времена простоя станков для таблиц обработки деталей по заданным порядкам
-    vector<int> tableTpr = getTpr(tableTij);
-    vector<int> rule1Tpr = getTpr(rule1Tij);
-    vector<int> rule2Tpr = getTpr(rule2Tij);
-    vector<int> rule3Tpr = getTpr(rule3Tij);
-    vector<int> rule4Tpr = getTpr(rule4Tij);
+    vector<int> tableTpr = getTpr(tableTij, table);
+    vector<int> rule1Tpr = getTpr(rule1Tij, rule1Table);
+    vector<int> rule2Tpr = getTpr(rule2Tij, rule2Table);
+    vector<int> rule3Tpr = getTpr(rule3Tij, rule3Table);
+    vector<int> rule4Tpr = getTpr(rule4Tij, rule4Table);
+    
+    cout << "Таблица совокупной длительности цикла матричным методом для исходного порядка:" << endl;
+    printTijTable(table, tableTij, tableToj, tableTpr, machines); cout << endl;
+    cout << "Ттц у исходной последовательности: " << Ttc << endl << endl;
+    cout << "Таблица совокупной длительности цикла матричным методом для 1-ого правила:" << endl;
+    printTijTable(rule1Table, rule1Tij, rule1Toj, rule1Tpr, machines); cout << endl;
+    cout << "Таблица совокупной длительности цикла матричным методом для 2-ого правила:" << endl;
+    printTijTable(rule2Table, rule2Tij, rule2Toj, rule2Tpr, machines); cout << endl;
+    cout << "Таблица совокупной длительности цикла матричным методом для 3-ого правила:" << endl;
+    printTijTable(rule3Table, rule3Tij, rule3Toj, rule3Tpr, machines); cout << endl;
+    cout << "Таблица совокупной длительности цикла матричным методом для 4-ого правила:" << endl;
+    printTijTable(rule4Table, rule4Tij, rule4Toj, rule4Tpr, machines); cout << endl;
 
-    //printTable(tableTij, machines);
+    findOptimalSequence(Ttc1, Ttc2, Ttc3, Ttc4, rule1Toj, rule2Toj, rule3Toj, rule4Toj, rule1Tpr, rule2Tpr, rule3Tpr, rule4Tpr, orderTable);
+    
+
+    int minTtc = Ttc, minT_PermitationsIndex = 0;
+    cout << "Решение перебором:" << endl;
+    vector<vector<int>> allPermutations = generateAllPermutations(details);
+    for (int i = 0; i < allPermutations.size(); i++) {
+        vector<vector<int>> currentTable = reorderTableByOrder(table, allPermutations[i]);
+        vector<vector<int>> currentTableTij(details, vector<int>(machines + 1));
+        int currentTtc = calculateTij(currentTableTij, currentTable);
+        if (minTtc > currentTtc) {
+            minTtc = currentTtc;
+            minT_PermitationsIndex = i;
+        }
+    }
+    cout << "Оптимальный порядок: ";
+    vector<int> optimalOrder = allPermutations[minT_PermitationsIndex];
+    for_each(optimalOrder.begin(), optimalOrder.end(), [](int x) { cout << x << " "; });
+    cout << endl;
+    vector<vector<int>> optimalTable = reorderTableByOrder(table, optimalOrder);
+    printTable(optimalTable, machines);
+    vector<vector<int>> optimalTableTij(details, vector<int>(machines + 1));
+    int optimalTtc = calculateTij(optimalTableTij, optimalTable);
+    vector<int> optimalTableToj = getToj(optimalTableTij, optimalTable);
+    vector<int> optimalTableTpr = getTpr(optimalTableTij, optimalTable);
+    cout << "Таблица совокупной длительности цикла матричным методом для оптимального порядка:" << endl;
+    printTijTable(optimalTable, optimalTableTij, optimalTableToj, optimalTableTpr, machines); cout << endl;
+    cout << "Tтц оптимального порядка = " << optimalTtc << endl;
 
     cout << endl << endl;
     return 0;
