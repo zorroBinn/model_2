@@ -44,27 +44,6 @@ void printTable(vector<vector<int>>& table, int machines) {
     }
 }
 
-//Функция вывода таблицы значений обработки деталей
-void printTableWithParam(vector<vector<int>>& table, vector<vector<int>>& parameters, int machines) {
-    for (int i = -1; i < machines + 3; i++) {
-        if (i == -1) cout << setw(3) << static_cast<char>('i') << " ";
-        else if (i < machines) cout << setw(3) << static_cast<char>('A' + i) << " ";
-        else if (i == machines) cout << setw(3) << "P1" << " ";
-        else if (i == machines + 1) cout << setw(3) << "P2" << " ";
-        else cout << "Lmb" << " ";
-    }
-    cout << endl;
-    for (int i = 0; i < table.size(); i++) {
-        for (int j = 0; j < table[i].size(); j++) {
-            cout << setw(3) << table[i][j] << " ";
-        }
-        for (int j = 1; j < 4; j++) {
-            cout << setw(3) << parameters[i][j] << " ";
-        }
-        cout << endl;
-    }
-}
-
 //Функция вывода таблицы значений обработки деталей с параметрами и последовательностями обработки
 void printTableWithParamAndOrder(vector<vector<int>>& table, vector<vector<int>>& parameters, vector<vector<int>>& orderTable, int machines) {
     for (int i = -1; i < machines + 7; i++) {
@@ -143,25 +122,6 @@ void distributeDetails(vector<vector<int>>& parameters, vector<int>& D0, vector<
     sort(D1.begin(), D1.end());
     sort(D10.begin(), D10.end());
     sort(D2.begin(), D2.end());
-}
-
-//Функция для вывода множеств деталей
-void printSets(vector<int>& D0, vector<int>& D1, vector<int>& D10, vector<int>& D2) {
-    cout << "D0 (lmb = 0): ";
-    for (int detail : D0) cout << detail << " ";
-    cout << endl;
-
-    cout << "D1 (lmb > 0): ";
-    for (int detail : D1) cout << detail << " ";
-    cout << endl;
-
-    cout << "D10 (lmb >= 0): ";
-    for (int detail : D10) cout << detail << " ";
-    cout << endl;
-
-    cout << "D2 (lmb < 0): ";
-    for (int detail : D2) cout << detail << " ";
-    cout << endl;
 }
 
 //Функция для заполнения первого столбца по первому правилу Петрова
